@@ -2,7 +2,7 @@ name: Devin
 
 on:
   workflow_run:
-    workflows: ["codeql.yml"]
+    workflows: [".github/workflows/codeql.yml"]
     types:
       - completed
 
