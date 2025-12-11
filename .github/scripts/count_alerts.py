@@ -38,8 +38,9 @@ if config_path.exists():
 else:
     config = {}
 
-min_batch_size = config.get("min_batch_size", 5)
-max_batch_size = config.get("max_batch_size", 20)
+# Priority: env var (from workflow_dispatch) > config file > default
+min_batch_size = int(os.environ.get("MIN_BATCH_SIZE") or config.get("min_batch_size") or 5)
+max_batch_size = int(os.environ.get("MAX_BATCH_SIZE") or config.get("max_batch_size") or 20)
 
 print(f"Config: min_batch_size={min_batch_size}, max_batch_size={max_batch_size}")
 

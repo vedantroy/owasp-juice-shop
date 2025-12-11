@@ -37,4 +37,6 @@ jobs:
       - name: Count CodeQL alerts
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          MIN_BATCH_SIZE: ${{ inputs.min_batch_size }}
+          MAX_BATCH_SIZE: ${{ inputs.max_batch_size }}
         run: python .github/scripts/count_alerts.py
