@@ -524,6 +524,10 @@ def main():
 
     # Parse and process
     issues = parse_sarif(sarif_data)
+
+    # Filter to only js/sql-injection vulnerabilities
+    issues = [i for i in issues if i.get("rule_id") == "js/sql-injection"]
+
     sorted_issues = sorted(issues, key=issue_sort_key)
     batches = create_batches(sorted_issues, min_batch_size, max_batch_size)
 
