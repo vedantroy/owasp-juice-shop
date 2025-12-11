@@ -220,7 +220,7 @@ export const toSimpleIpAddress = (ipv6: string) => {
 
 export const getErrorMessage = (error: unknown) => {
   if (error instanceof Error) return error.message
-  return String(error)
+  return 'An unexpected error occurred'
 }
 
 export const matchesSystemIniFile = (text: string) => {
