@@ -50,7 +50,6 @@ IMPORTANT: Do NOT fix an issue if:
 - You need additional information or context to understand the issue
 - The issue appears to be a FALSE POSITIVE (e.g., the data is actually safe, or there's validation you can't see)
 - The fix would break functionality or change intended behavior
-- The "vulnerability" is intentional (e.g., a security testing app, CTF challenge, or educational code)
 
 If you skip an issue, briefly explain why in a comment or note.
 
