@@ -1,4 +1,5 @@
 import fs from 'node:fs'
+import path from 'node:path'
 import yaml from 'js-yaml'
 import { type NextFunction, type Request, type Response } from 'express'
 
@@ -7,6 +8,11 @@ import * as challengeUtils from '../lib/challengeUtils'
 import { type ChallengeKey } from 'models/challenge'
 
 const FixesDir = 'data/static/codefixes'
+
+const getInfoFilePath = (key: string): string => {
+  const safeKey = path.basename(key)
+  return path.join(FixesDir, `${safeKey}.info.yml`)
+}
 
 interface codeFix {
   fixes: string[]
@@ -77,8 +83,9 @@ export const checkCorrectFix = () => async (req: Request<Record<string, unknown>
     })
   } else {
     let explanation
-    if (fs.existsSync('./data/static/codefixes/' + key + '.info.yml')) {
-      const codingChallengeInfos = yaml.load(fs.readFileSync('./data/static/codefixes/' + key + '.info.yml', 'utf8'))
+    const infoFilePath = getInfoFilePath(key)
+    if (fs.existsSync(infoFilePath)) {
+      const codingChallengeInfos = yaml.load(fs.readFileSync(infoFilePath, 'utf8'))
       const selectedFixInfo = codingChallengeInfos?.fixes.find(({ id }: { id: number }) => id === selectedFix + 1)
       if (selectedFixInfo?.explanation) explanation = res.__(selectedFixInfo.explanation)
     }

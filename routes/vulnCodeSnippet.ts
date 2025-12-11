@@ -6,6 +6,7 @@
 import { type NextFunction, type Request, type Response } from 'express'
 import yaml from 'js-yaml'
 import fs from 'node:fs'
+import path from 'node:path'
 
 import { getCodeChallenges } from '../lib/codingChallenges'
 import * as challengeUtils from '../lib/challengeUtils'
@@ -20,6 +21,13 @@ interface SnippetRequestBody {
 interface VerdictRequestBody {
   selectedLines: number[]
   key: ChallengeKey
+}
+
+const FixesDir = 'data/static/codefixes'
+
+const getInfoFilePath = (key: string): string => {
+  const safeKey = path.basename(key)
+  return path.join(FixesDir, `${safeKey}.info.yml`)
 }
 
 const setStatusCode = (error: any) => {
@@ -86,8 +94,9 @@ export const checkVulnLines = () => async (req: Request<Record<string, unknown>,
   const selectedLines: number[] = req.body.selectedLines
   const verdict = getVerdict(vulnLines, neutralLines, selectedLines)
   let hint
-  if (fs.existsSync('./data/static/codefixes/' + key + '.info.yml')) {
-    const codingChallengeInfos = yaml.load(fs.readFileSync('./data/static/codefixes/' + key + '.info.yml', 'utf8'))
+  const infoFilePath = getInfoFilePath(key)
+  if (fs.existsSync(infoFilePath)) {
+    const codingChallengeInfos = yaml.load(fs.readFileSync(infoFilePath, 'utf8'))
     if (codingChallengeInfos?.hints) {
       if (accuracy.getFindItAttempts(key) > codingChallengeInfos.hints.length) {
         if (vulnLines.length === 1) {
