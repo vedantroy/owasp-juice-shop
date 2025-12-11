@@ -537,11 +537,19 @@ def main():
         repo = os.environ.get("GITHUB_REPOSITORY", "")
         commit_sha = get_commit_sha_from_sarif(sarif_data) or os.environ.get("GITHUB_SHA", "main")
 
-        print(f"\nSubmitting {len(batches)} batches to Devin...")
+        # Optional limit on number of sessions (for debugging/testing)
+        debug_max_sessions_str = os.environ.get("DEBUG_MAX_SESSIONS")
+        debug_max_sessions = int(debug_max_sessions_str) if debug_max_sessions_str else None
+
+        batches_to_submit = batches[:debug_max_sessions] if debug_max_sessions else batches
+
+        print(f"\nSubmitting {len(batches_to_submit)} batches to Devin...")
+        if debug_max_sessions:
+            print(f"  (DEBUG_MAX_SESSIONS={debug_max_sessions}, limiting from {len(batches)} total)")
         print(f"  Repository: {repo}")
         print(f"  Commit SHA: {commit_sha}")
 
-        for i, batch in enumerate(batches):
+        for i, batch in enumerate(batches_to_submit):
             rule_ids = set(issue.get("rule_id", "") for issue in batch)
             title = f"Fix CodeQL issues (Batch {i+1}/{len(batches)}): {', '.join(sorted(rule_ids)[:3])}"
             if len(rule_ids) > 3:
