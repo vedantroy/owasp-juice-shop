@@ -342,6 +342,13 @@ restoreOverwrittenFilesWithOriginals().then(() => {
   }))
   // vuln-code-snippet end resetPasswordMortyChallenge
 
+  /* Default rate limiter for routes performing database/file access or authorization */
+  const defaultRateLimiter = rateLimit({
+    windowMs: 5 * 60 * 1000,
+    max: 100,
+    validate: false
+  })
+
   // vuln-code-snippet start changeProductChallenge
   /** Authorization **/
   /* Checks on JWT in Authorization header */ // vuln-code-snippet hide-line
@@ -615,19 +622,19 @@ restoreOverwrittenFilesWithOriginals().then(() => {
   app.get('/rest/languages', getLanguageList())
   app.get('/rest/order-history', orderHistory())
   app.get('/rest/order-history/orders', security.isAccounting(), allOrders())
-  app.put('/rest/order-history/:id/delivery-status', security.isAccounting(), toggleDeliveryStatus())
+  app.put('/rest/order-history/:id/delivery-status', defaultRateLimiter, security.isAccounting(), toggleDeliveryStatus())
   app.get('/rest/wallet/balance', security.appendUserId(), getWalletBalance())
   app.put('/rest/wallet/balance', security.appendUserId(), addWalletBalance())
   app.get('/rest/deluxe-membership', deluxeMembershipStatus())
-  app.post('/rest/deluxe-membership', security.appendUserId(), upgradeToDeluxe())
+  app.post('/rest/deluxe-membership', defaultRateLimiter, security.appendUserId(), upgradeToDeluxe())
   app.get('/rest/memories', getMemories())
   app.get('/rest/chatbot/status', chatbot.status())
   app.post('/rest/chatbot/respond', chatbot.process())
   /* NoSQL API endpoints */
-  app.get('/rest/products/:id/reviews', showProductReviews())
-  app.put('/rest/products/:id/reviews', createProductReviews())
-  app.patch('/rest/products/reviews', security.isAuthorized(), updateProductReviews())
-  app.post('/rest/products/reviews', security.isAuthorized(), likeProductReviews())
+  app.get('/rest/products/:id/reviews', defaultRateLimiter, showProductReviews())
+  app.put('/rest/products/:id/reviews', defaultRateLimiter, createProductReviews())
+  app.patch('/rest/products/reviews', defaultRateLimiter, security.isAuthorized(), updateProductReviews())
+  app.post('/rest/products/reviews', defaultRateLimiter, security.isAuthorized(), likeProductReviews())
 
   /* Web3 API endpoints */
   app.post('/rest/web3/submitKey', checkKeys())
@@ -640,9 +647,9 @@ restoreOverwrittenFilesWithOriginals().then(() => {
   app.post('/b2b/v2/orders', b2bOrder())
 
   /* File Serving */
-  app.get('/the/devs/are/so/funny/they/hid/an/easter/egg/within/the/easter/egg', serveEasterEgg())
-  app.get('/this/page/is/hidden/behind/an/incredibly/high/paywall/that/could/only/be/unlocked/by/sending/1btc/to/us', servePremiumContent())
-  app.get('/we/may/also/instruct/you/to/refuse/all/reasonably/necessary/responsibility', servePrivacyPolicyProof())
+  app.get('/the/devs/are/so/funny/they/hid/an/easter/egg/within/the/easter/egg', defaultRateLimiter, serveEasterEgg())
+  app.get('/this/page/is/hidden/behind/an/incredibly/high/paywall/that/could/only/be/unlocked/by/sending/1btc/to/us', defaultRateLimiter, servePremiumContent())
+  app.get('/we/may/also/instruct/you/to/refuse/all/reasonably/necessary/responsibility', defaultRateLimiter, servePrivacyPolicyProof())
 
   /* Route for dataerasure page */
   app.use('/dataerasure', dataErasure)
@@ -651,18 +658,18 @@ restoreOverwrittenFilesWithOriginals().then(() => {
   app.get('/redirect', performRedirect())
 
   /* Routes for promotion video page */
-  app.get('/promotion', promotionVideo())
-  app.get('/video', getVideo())
+  app.get('/promotion', defaultRateLimiter, promotionVideo())
+  app.get('/video', defaultRateLimiter, getVideo())
 
   /* Routes for profile page */
-  app.get('/profile', security.updateAuthenticatedUsers(), getUserProfile())
-  app.post('/profile', updateUserProfile())
+  app.get('/profile', defaultRateLimiter, security.updateAuthenticatedUsers(), getUserProfile())
+  app.post('/profile', defaultRateLimiter, updateUserProfile())
 
   /* Route for vulnerable code snippets */
   app.get('/snippets/:challenge', serveCodeSnippet())
-  app.post('/snippets/verdict', checkVulnLines())
+  app.post('/snippets/verdict', defaultRateLimiter, checkVulnLines())
   app.get('/snippets/fixes/:key', serveCodeFixes())
-  app.post('/snippets/fixes', checkCorrectFix())
+  app.post('/snippets/fixes', defaultRateLimiter, checkCorrectFix())
 
   app.use(serveAngularClient())
 
