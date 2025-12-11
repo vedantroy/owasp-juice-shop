@@ -342,13 +342,6 @@ restoreOverwrittenFilesWithOriginals().then(() => {
   }))
   // vuln-code-snippet end resetPasswordMortyChallenge
 
-  /* Default rate limiter for routes performing database/file access or authorization */
-  const defaultRateLimiter = rateLimit({
-    windowMs: 5 * 60 * 1000,
-    max: 100,
-    validate: false
-  })
-
   // vuln-code-snippet start changeProductChallenge
   /** Authorization **/
   /* Checks on JWT in Authorization header */ // vuln-code-snippet hide-line
@@ -622,19 +615,19 @@ restoreOverwrittenFilesWithOriginals().then(() => {
   app.get('/rest/languages', getLanguageList())
   app.get('/rest/order-history', orderHistory())
   app.get('/rest/order-history/orders', security.isAccounting(), allOrders())
-  app.put('/rest/order-history/:id/delivery-status', defaultRateLimiter, security.isAccounting(), toggleDeliveryStatus())
+  app.put('/rest/order-history/:id/delivery-status', rateLimit({ windowMs: 5 * 60 * 1000, max: 100, validate: false }), security.isAccounting(), toggleDeliveryStatus())
   app.get('/rest/wallet/balance', security.appendUserId(), getWalletBalance())
   app.put('/rest/wallet/balance', security.appendUserId(), addWalletBalance())
   app.get('/rest/deluxe-membership', deluxeMembershipStatus())
-  app.post('/rest/deluxe-membership', defaultRateLimiter, security.appendUserId(), upgradeToDeluxe())
+  app.post('/rest/deluxe-membership', rateLimit({ windowMs: 5 * 60 * 1000, max: 100, validate: false }), security.appendUserId(), upgradeToDeluxe())
   app.get('/rest/memories', getMemories())
   app.get('/rest/chatbot/status', chatbot.status())
   app.post('/rest/chatbot/respond', chatbot.process())
   /* NoSQL API endpoints */
-  app.get('/rest/products/:id/reviews', defaultRateLimiter, showProductReviews())
-  app.put('/rest/products/:id/reviews', defaultRateLimiter, createProductReviews())
-  app.patch('/rest/products/reviews', defaultRateLimiter, security.isAuthorized(), updateProductReviews())
-  app.post('/rest/products/reviews', defaultRateLimiter, security.isAuthorized(), likeProductReviews())
+  app.get('/rest/products/:id/reviews', rateLimit({ windowMs: 5 * 60 * 1000, max: 100, validate: false }), showProductReviews())
+  app.put('/rest/products/:id/reviews', rateLimit({ windowMs: 5 * 60 * 1000, max: 100, validate: false }), createProductReviews())
+  app.patch('/rest/products/reviews', rateLimit({ windowMs: 5 * 60 * 1000, max: 100, validate: false }), security.isAuthorized(), updateProductReviews())
+  app.post('/rest/products/reviews', rateLimit({ windowMs: 5 * 60 * 1000, max: 100, validate: false }), security.isAuthorized(), likeProductReviews())
 
   /* Web3 API endpoints */
   app.post('/rest/web3/submitKey', checkKeys())
@@ -647,9 +640,9 @@ restoreOverwrittenFilesWithOriginals().then(() => {
   app.post('/b2b/v2/orders', b2bOrder())
 
   /* File Serving */
-  app.get('/the/devs/are/so/funny/they/hid/an/easter/egg/within/the/easter/egg', defaultRateLimiter, serveEasterEgg())
-  app.get('/this/page/is/hidden/behind/an/incredibly/high/paywall/that/could/only/be/unlocked/by/sending/1btc/to/us', defaultRateLimiter, servePremiumContent())
-  app.get('/we/may/also/instruct/you/to/refuse/all/reasonably/necessary/responsibility', defaultRateLimiter, servePrivacyPolicyProof())
+  app.get('/the/devs/are/so/funny/they/hid/an/easter/egg/within/the/easter/egg', rateLimit({ windowMs: 5 * 60 * 1000, max: 100, validate: false }), serveEasterEgg())
+  app.get('/this/page/is/hidden/behind/an/incredibly/high/paywall/that/could/only/be/unlocked/by/sending/1btc/to/us', rateLimit({ windowMs: 5 * 60 * 1000, max: 100, validate: false }), servePremiumContent())
+  app.get('/we/may/also/instruct/you/to/refuse/all/reasonably/necessary/responsibility', rateLimit({ windowMs: 5 * 60 * 1000, max: 100, validate: false }), servePrivacyPolicyProof())
 
   /* Route for dataerasure page */
   app.use('/dataerasure', dataErasure)
@@ -658,18 +651,18 @@ restoreOverwrittenFilesWithOriginals().then(() => {
   app.get('/redirect', performRedirect())
 
   /* Routes for promotion video page */
-  app.get('/promotion', defaultRateLimiter, promotionVideo())
-  app.get('/video', defaultRateLimiter, getVideo())
+  app.get('/promotion', rateLimit({ windowMs: 5 * 60 * 1000, max: 100, validate: false }), promotionVideo())
+  app.get('/video', rateLimit({ windowMs: 5 * 60 * 1000, max: 100, validate: false }), getVideo())
 
   /* Routes for profile page */
-  app.get('/profile', defaultRateLimiter, security.updateAuthenticatedUsers(), getUserProfile())
-  app.post('/profile', defaultRateLimiter, updateUserProfile())
+  app.get('/profile', rateLimit({ windowMs: 5 * 60 * 1000, max: 100, validate: false }), security.updateAuthenticatedUsers(), getUserProfile())
+  app.post('/profile', rateLimit({ windowMs: 5 * 60 * 1000, max: 100, validate: false }), updateUserProfile())
 
   /* Route for vulnerable code snippets */
   app.get('/snippets/:challenge', serveCodeSnippet())
-  app.post('/snippets/verdict', defaultRateLimiter, checkVulnLines())
+  app.post('/snippets/verdict', rateLimit({ windowMs: 5 * 60 * 1000, max: 100, validate: false }), checkVulnLines())
   app.get('/snippets/fixes/:key', serveCodeFixes())
-  app.post('/snippets/fixes', defaultRateLimiter, checkCorrectFix())
+  app.post('/snippets/fixes', rateLimit({ windowMs: 5 * 60 * 1000, max: 100, validate: false }), checkCorrectFix())
 
   app.use(serveAngularClient())
 
