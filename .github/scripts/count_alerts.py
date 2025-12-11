@@ -2,8 +2,8 @@
 SARIF-based alert processing with code flow support.
 
 Can be run in two modes:
-1. Local: python count_alerts.py --sarif path/to/file.sarif
-2. GitHub Actions: Fetches SARIF from GitHub API automatically
+1. Local: python count_alerts.py --sarif path/to/file.sarif --local
+2. GitHub Actions: Fetches SARIF from GitHub API and submits to Devin
 """
 
 from __future__ import annotations
@@ -15,6 +15,102 @@ from functools import lru_cache
 from pathlib import Path
 import requests
 import yaml
+
+
+# ============================================================================
+# Devin API
+# ============================================================================
+
+DEVIN_SYSTEM_PROMPT = """You are fixing CodeQL security issues in a codebase.
+
+For each issue, you will be given:
+1. The rule ID and severity level
+2. The location of the vulnerability (file and line)
+3. A message describing the issue
+4. The source code at that location
+5. A "Code Flow" showing how tainted data flows from source to sink
+
+IMPORTANT: When analyzing the Code Flow:
+- The flow shows how untrusted data travels through the code
+- The FIRST step is the SOURCE (where untrusted data enters)
+- The LAST step is the SINK (where the vulnerability occurs)
+- Sometimes the fix should be at the SINK (e.g., sanitize before use)
+- Sometimes the fix should be EARLIER in the flow (e.g., a shared utility function)
+- If you see a utility function like `utils.getErrorMessage(error)` in the flow, consider if the fix belongs there instead of at each call site
+
+For each issue:
+1. Analyze the code flow to understand where the data comes from
+2. Determine the BEST place to fix (not always the final location)
+3. Apply the appropriate fix (input validation, output encoding, parameterized queries, etc.)
+4. Make sure your fix doesn't break existing functionality
+
+IMPORTANT: Do NOT fix an issue if:
+- You are not confident in the fix
+- You need additional information or context to understand the issue
+- The issue appears to be a FALSE POSITIVE (e.g., the data is actually safe, or there's validation you can't see)
+- The fix would break functionality or change intended behavior
+- The "vulnerability" is intentional (e.g., a security testing app, CTF challenge, or educational code)
+
+If you skip an issue, briefly explain why in a comment or note.
+
+Fix the issues you ARE confident about below:
+
+"""
+
+
+def format_batch_for_devin(batch: list[dict]) -> str:
+    """Format a batch of issues as a prompt for Devin."""
+    lines = [DEVIN_SYSTEM_PROMPT]
+    lines.append("=" * 80)
+    lines.append(f"ISSUES TO FIX ({len(batch)} total)")
+    lines.append("=" * 80)
+
+    for idx, issue in enumerate(batch, 1):
+        rule_id = issue.get("rule_id", "")
+        level = issue.get("level", "")
+        file_path = issue.get("file", "")
+        message = issue.get("message", "")
+
+        lines.append(f"\n--- Issue {idx} ---")
+        lines.append(f"Rule: {rule_id}")
+        lines.append(f"Severity: {level}")
+        lines.append(f"File: {file_path}")
+        lines.append(f"Line: {issue.get('start_line')}")
+        lines.append(f"Message: {message}")
+
+        # Source code
+        source = extract_source_text(file_path, issue.get("start_line"), issue.get("end_line"))
+        if source:
+            lines.append(f"Source Code:\n{source}")
+
+        # Code flows
+        code_flows = issue.get("code_flows", [])
+        if code_flows:
+            lines.append(f"\nCode Flow ({len(code_flows)} paths):")
+            for j, flow in enumerate(code_flows[:2]):  # Limit to first 2 flows
+                lines.append(f"  Path {j+1}:")
+                lines.append(format_code_flow(flow))
+
+    return "\n".join(lines)
+
+
+def submit_to_devin(prompt: str, title: str, api_key: str, snapshot_id: str) -> dict:
+    """Submit a batch to Devin API."""
+    response = requests.post(
+        "https://api.devin.ai/v1/sessions",
+        headers={
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json",
+        },
+        json={
+            "prompt": prompt,
+            "title": title,
+            "snapshot_id": snapshot_id,
+            "idempotent": False,
+        },
+    )
+    response.raise_for_status()
+    return response.json()
 
 
 # ============================================================================
@@ -344,6 +440,7 @@ def main():
     parser.add_argument("--sarif", type=str, help="Path to local SARIF file (if not provided, fetches from GitHub API)")
     parser.add_argument("--min-batch-size", type=int, help="Minimum batch size")
     parser.add_argument("--max-batch-size", type=int, help="Maximum batch size")
+    parser.add_argument("--local", action="store_true", help="Local mode: print output only, don't submit to Devin")
     args = parser.parse_args()
 
     # Load config
@@ -352,6 +449,19 @@ def main():
     max_batch_size = args.max_batch_size or get_config_value(config, "MAX_BATCH_SIZE", "max_batch_size", 20)
 
     print(f"Config: min_batch_size={min_batch_size}, max_batch_size={max_batch_size}")
+    print(f"Mode: {'local' if args.local else 'CI (will submit to Devin)'}")
+
+    # Check for Devin credentials in CI mode
+    devin_api_key = os.environ.get("DEVIN_API_KEY")
+    devin_snapshot_id = os.environ.get("DEVIN_SNAPSHOT_ID")
+
+    if not args.local:
+        if not devin_api_key:
+            print("Error: DEVIN_API_KEY not set (required in CI mode)")
+            return 1
+        if not devin_snapshot_id:
+            print("Error: DEVIN_SNAPSHOT_ID not set (required in CI mode)")
+            return 1
 
     # Load SARIF
     if args.sarif:
@@ -377,12 +487,38 @@ def main():
     print(f"Unique files: {len(set(i.get('file', '') for i in issues))}")
     print(f"Issues with code flows: {len([i for i in issues if i.get('code_flows')])}")
 
+    # Print batches
     print_batches(batches)
 
     print(f"\n{'='*80}")
     print(f"SUMMARY: {len(issues)} issues in {len(batches)} batches")
     print(f"  Min batch size: {min_batch_size}, Max batch size: {max_batch_size}")
     print("=" * 80)
+
+    # Submit to Devin if not in local mode
+    if not args.local and batches:
+        print(f"\nSubmitting {len(batches)} batches to Devin...")
+
+        for i, batch in enumerate(batches):
+            rule_ids = set(issue.get("rule_id", "") for issue in batch)
+            title = f"Fix CodeQL issues (Batch {i+1}/{len(batches)}): {', '.join(sorted(rule_ids)[:3])}"
+            if len(rule_ids) > 3:
+                title += f" +{len(rule_ids) - 3} more"
+
+            prompt = format_batch_for_devin(batch)
+
+            print(f"\n  Batch {i+1}/{len(batches)}: {len(batch)} issues")
+            print(f"    Title: {title}")
+
+            try:
+                result = submit_to_devin(prompt, title, devin_api_key, devin_snapshot_id)
+                print(f"    Session ID: {result.get('session_id')}")
+                print(f"    URL: {result.get('url')}")
+            except requests.exceptions.RequestException as e:
+                print(f"    Error submitting to Devin: {e}")
+                # Continue with other batches
+
+        print(f"\nAll batches submitted to Devin!")
 
     return 0
 

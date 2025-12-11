@@ -34,9 +34,11 @@ jobs:
       - name: Install dependencies
         run: pip install requests pyyaml
 
-      - name: Count CodeQL alerts
+      - name: Process CodeQL alerts and submit to Devin
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           MIN_BATCH_SIZE: ${{ inputs.min_batch_size }}
           MAX_BATCH_SIZE: ${{ inputs.max_batch_size }}
+          DEVIN_API_KEY: ${{ secrets.DEVIN_API_KEY }}
+          DEVIN_SNAPSHOT_ID: ${{ secrets.DEVIN_SNAPSHOT_ID }}
         run: python .github/scripts/count_alerts.py
