@@ -60,7 +60,11 @@ function calculateAccuracy (challengeKey: ChallengeKey, phase: Phase) {
 }
 
 function storeVerdict (challengeKey: ChallengeKey, phase: Phase, verdict: boolean) {
-  if (!solves[challengeKey]) {
+  const key = challengeKey as string
+  if (key === '__proto__' || key === 'constructor' || key === 'prototype') {
+    return
+  }
+  if (!Object.prototype.hasOwnProperty.call(solves, challengeKey)) {
     solves[challengeKey] = { 'find it': false, 'fix it': false, attempts: { 'find it': 0, 'fix it': 0 } }
   }
   if (!solves[challengeKey][phase]) {
