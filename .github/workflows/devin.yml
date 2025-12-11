@@ -5,11 +5,21 @@ on:
     workflows: [".github/workflows/codeql.yml"]
     types:
       - completed
+  workflow_dispatch:
+    inputs:
+      min_batch_size:
+        description: 'Minimum batch size'
+        default: 5
+        type: number
+      max_batch_size:
+        description: 'Maximum batch size'
+        default: 20
+        type: number
 
 jobs:
   count-alerts:
     runs-on: ubuntu-latest
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     permissions:
       security-events: read
     steps:

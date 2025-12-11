@@ -1,3 +1,30 @@
+"""
+Alert schema:
+
+number: int (alert ID)
+state: str ("open", "dismissed", "fixed")
+html_url: str (link to alert on GitHub)
+rule:
+  id: str (e.g. "js/code-injection")
+  name: str
+  description: str
+  severity: str ("error", "warning")
+  security_severity_level: str ("critical", "high", "medium", "low")
+  tags: array of CWE strings
+  help: str (detailed markdown explanation)
+most_recent_instance:
+  location:
+    path: str (file path)
+    start_line: int
+    end_line: int
+    start_column: int
+    end_column: int
+  message:
+    text: str (description of the issue)
+  commit_sha: str
+instances_url: str (API URL to get all instances)
+"""
+
 import os
 import json
 import requests
