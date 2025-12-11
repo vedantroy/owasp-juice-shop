@@ -253,7 +253,7 @@ restoreOverwrittenFilesWithOriginals().then(() => {
           } else if (!relativePath.startsWith('.') && currentFolder !== '') {
             relativePath = currentFolder + '/' + relativePath
           } else {
-            relativePath = relativePath.replace('..', '.')
+            relativePath = relativePath.replace(/\.\./g, '.')
           }
           return 'a href="' + relativePath + '"'
         })
