@@ -20,7 +20,7 @@ on:
         type: string
 
 jobs:
-  count-alerts:
+  process-codeql-alerts:
     runs-on: ubuntu-latest
     # Only run on main branch to avoid recursion when Devin creates PR branches
     if: ${{ github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main') }}
