@@ -11,16 +11,23 @@ headers = {
     "X-GitHub-Api-Version": "2022-11-28",
 }
 
-url = f"https://api.github.com/repos/{repo}/code-scanning/alerts"
-response = requests.get(url, headers=headers)
-response.raise_for_status()
+alerts = []
+url = f"https://api.github.com/repos/{repo}/code-scanning/alerts?per_page=100"
 
-alerts = response.json()
+while url:
+    response = requests.get(url, headers=headers)
+    response.raise_for_status()
+    alerts.extend(response.json())
+
+    # Check for next page
+    url = None
+    if "Link" in response.headers:
+        for link in response.headers["Link"].split(", "):
+            if 'rel="next"' in link:
+                url = link[link.index("<")+1:link.index(">")]
+                break
+
 open_alerts = [a for a in alerts if a["state"] == "open"]
 
 print(f"Total alerts: {len(alerts)}")
 print(f"Open alerts: {len(open_alerts)}")
-print("\n--- Response headers ---")
-print(dict(response.headers))
-print("\n--- Full alerts response ---")
-print(json.dumps(alerts, indent=2))
