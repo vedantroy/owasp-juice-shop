@@ -28,7 +28,7 @@ function handleZipFileUpload ({ file }: Request, res: Response, next: NextFuncti
   if (utils.endsWith(file?.originalname.toLowerCase(), '.zip')) {
     if (((file?.buffer) != null) && utils.isChallengeEnabled(challenges.fileWriteChallenge)) {
       const buffer = file.buffer
-      const filename = file.originalname.toLowerCase()
+      const filename = path.basename(file.originalname.toLowerCase())
       const tempFile = path.join(os.tmpdir(), filename)
       fs.open(tempFile, 'w', function (err, fd) {
         if (err != null) { next(err) }
