@@ -28,10 +28,10 @@ For each issue, you will be given:
 2. The location of the vulnerability (file and line)
 3. A message describing the issue
 4. The source code at that location
-5. A "Code Flow" showing how tainted data flows from source to sink
-6. A GitHub deeplink to the exact line in the codebase
+5. A "Data Flow" showing how tainted data flows from source to sink
+6. A GitHub link to the exact line in the codebase
 
-IMPORTANT: When analyzing the Code Flow:
+IMPORTANT: When analyzing the Data Flow:
 - The flow shows how untrusted data travels through the code
 - The FIRST step is the SOURCE (where untrusted data enters)
 - The LAST step is the SINK (where the vulnerability occurs)
@@ -40,7 +40,7 @@ IMPORTANT: When analyzing the Code Flow:
 - If you see a utility function like `utils.getErrorMessage(error)` in the flow, consider if the fix belongs there instead of at each call site
 
 For each issue:
-1. Analyze the code flow to understand where the data comes from
+1. Analyze the data flow to understand where the data comes from
 2. Determine the BEST place to fix (not always the final location)
 3. Apply the appropriate fix (input validation, output encoding, parameterized queries, etc.)
 4. Make sure your fix doesn't break existing functionality
@@ -55,15 +55,25 @@ If you skip an issue, briefly explain why in a comment or note.
 
 IMPORTANT: Do NOT use the presence of comments like "vuln-code-snippet" or "Challenge" in the code as a reason to skip fixing. These are just metadata/documentation comments. You MUST still analyze each issue independently and fix it if you are confident in the fix. The comments do not indicate intentional vulnerabilities - they are simply labels.
 
-IMPORTANT: When you create a Pull Request, include in the PR description:
-1. A summary of what was fixed
-2. For EACH issue fixed, include:
-   - The original CodeQL rule ID and message
-   - The GitHub deeplink to the vulnerable line (provided below as "Deeplink")
-   - The code flow summary showing source -> sink
-   - What fix was applied and why
+IMPORTANT: Pull Request format:
 
-This helps reviewers understand exactly what CodeQL issue triggered each fix.
+Title: "Fix {N} CodeQL Issue(s): Brief summary" (use "Issue" if N=1, "Issues" if N>1)
+
+Body format:
+```
+This PR fixes {N} CodeQL security issue(s) identified in the codebase:
+
+**Issue 1: Rule Name (rule-id)**
+- **File**: `path/to/file.ts:LINE`
+- **Vulnerable code**: https://github.com/OWNER/REPO/blob/COMMIT/path/to/file.ts#L{LINE}
+- **Data flow**: `source` → `intermediate` → `sink`
+- **Fix**: Description of what was changed and why
+
+**Issue 2: Rule Name (rule-id)**
+...
+```
+
+The "Vulnerable code" line should be the bare GitHub deeplink (provided below as "Deeplink") on its own line.
 
 Fix the issues you ARE confident about below:
 
@@ -102,10 +112,10 @@ def format_batch_for_devin(batch: list[dict], repo: str, commit_sha: str) -> str
         if source:
             lines.append(f"Source Code:\n{source}")
 
-        # Code flows
+        # Data flows
         code_flows = issue.get("code_flows", [])
         if code_flows:
-            lines.append(f"\nCode Flow ({len(code_flows)} paths):")
+            lines.append(f"\nData Flow ({len(code_flows)} paths):")
             for j, flow in enumerate(code_flows[:2]):  # Limit to first 2 flows
                 lines.append(f"  Path {j+1}:")
                 lines.append(format_code_flow(flow))
@@ -458,7 +468,7 @@ def print_batches(batches: list[list[dict]]) -> None:
             # Print code flows
             code_flows = issue.get("code_flows", [])
             if code_flows:
-                print(f"  Code Flows ({len(code_flows)} paths):")
+                print(f"  Data Flows ({len(code_flows)} paths):")
                 for j, flow in enumerate(code_flows[:3]):  # Limit to first 3 flows
                     print(f"    Path {j+1}:")
                     print(format_code_flow(flow))
