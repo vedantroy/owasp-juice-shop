@@ -27,7 +27,21 @@ instances_url: str (API URL to get all instances)
 
 import os
 import json
+from pathlib import Path
 import requests
+import yaml
+
+# Load config from .github/devin.yml or use defaults
+config_path = Path(".github/devin.yml")
+if config_path.exists():
+    config = yaml.safe_load(config_path.read_text()) or {}
+else:
+    config = {}
+
+min_batch_size = config.get("min_batch_size", 5)
+max_batch_size = config.get("max_batch_size", 20)
+
+print(f"Config: min_batch_size={min_batch_size}, max_batch_size={max_batch_size}")
 
 repo = os.environ["GITHUB_REPOSITORY"]
 token = os.environ["GITHUB_TOKEN"]
