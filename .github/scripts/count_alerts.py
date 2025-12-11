@@ -39,8 +39,16 @@ else:
     config = {}
 
 # Priority: env var (from workflow_dispatch) > config file > default
-min_batch_size = int(os.environ.get("MIN_BATCH_SIZE") or config.get("min_batch_size") or 5)
-max_batch_size = int(os.environ.get("MAX_BATCH_SIZE") or config.get("max_batch_size") or 20)
+def get_config(env_key, config_key, default):
+    env_val = os.environ.get(env_key)
+    if env_val is not None and env_val != "":
+        return int(env_val)
+    if config_key in config:
+        return config[config_key]
+    return default
+
+min_batch_size = get_config("MIN_BATCH_SIZE", "min_batch_size", 5)
+max_batch_size = get_config("MAX_BATCH_SIZE", "max_batch_size", 20)
 
 print(f"Config: min_batch_size={min_batch_size}, max_batch_size={max_batch_size}")
 
