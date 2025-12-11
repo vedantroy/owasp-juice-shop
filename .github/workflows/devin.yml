@@ -15,6 +15,9 @@ on:
         description: 'Maximum batch size'
         default: 20
         type: number
+      debug_max_sessions:
+        description: 'Max Devin sessions to create (for debugging, leave empty for all)'
+        type: string
 
 jobs:
   count-alerts:
@@ -40,6 +43,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           MIN_BATCH_SIZE: ${{ inputs.min_batch_size }}
           MAX_BATCH_SIZE: ${{ inputs.max_batch_size }}
+          DEBUG_MAX_SESSIONS: ${{ inputs.debug_max_sessions }}
           DEVIN_API_KEY: ${{ secrets.DEVIN_API_KEY }}
           DEVIN_SNAPSHOT_ID: ${{ secrets.DEVIN_SNAPSHOT_ID }}
         run: python .github/scripts/process_codeql.py
