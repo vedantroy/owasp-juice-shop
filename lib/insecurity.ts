@@ -135,7 +135,7 @@ export const redirectAllowlist = new Set([
 export const isRedirectAllowed = (url: string) => {
   let allowed = false
   for (const allowedUrl of redirectAllowlist) {
-    allowed = allowed || url.includes(allowedUrl) // vuln-code-snippet vuln-line redirectChallenge
+    allowed = allowed || url === allowedUrl || url.startsWith(allowedUrl + '/') || url.startsWith(allowedUrl + '?')
   }
   return allowed
 }
