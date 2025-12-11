@@ -19,7 +19,8 @@ on:
 jobs:
   count-alerts:
     runs-on: ubuntu-latest
-    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    # Only run on main branch to avoid recursion when Devin creates PR branches
+    if: ${{ github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main') }}
     permissions:
       security-events: read
     steps:

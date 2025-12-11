@@ -29,6 +29,7 @@ For each issue, you will be given:
 3. A message describing the issue
 4. The source code at that location
 5. A "Code Flow" showing how tainted data flows from source to sink
+6. A GitHub deeplink to the exact line in the codebase
 
 IMPORTANT: When analyzing the Code Flow:
 - The flow shows how untrusted data travels through the code
@@ -53,33 +54,52 @@ IMPORTANT: Do NOT fix an issue if:
 
 If you skip an issue, briefly explain why in a comment or note.
 
+IMPORTANT: Do NOT use the presence of comments like "vuln-code-snippet" or "Challenge" in the code as a reason to skip fixing. These are just metadata/documentation comments. You MUST still analyze each issue independently and fix it if you are confident in the fix. The comments do not indicate intentional vulnerabilities - they are simply labels.
+
+IMPORTANT: When you create a Pull Request, include in the PR description:
+1. A summary of what was fixed
+2. For EACH issue fixed, include:
+   - The original CodeQL rule ID and message
+   - The GitHub deeplink to the vulnerable line (provided below as "Deeplink")
+   - The code flow summary showing source -> sink
+   - What fix was applied and why
+
+This helps reviewers understand exactly what CodeQL issue triggered each fix.
+
 Fix the issues you ARE confident about below:
 
 """
 
 
-def format_batch_for_devin(batch: list[dict]) -> str:
+def format_batch_for_devin(batch: list[dict], repo: str, commit_sha: str) -> str:
     """Format a batch of issues as a prompt for Devin."""
     lines = [DEVIN_SYSTEM_PROMPT]
     lines.append("=" * 80)
     lines.append(f"ISSUES TO FIX ({len(batch)} total)")
+    lines.append(f"Repository: {repo}")
+    lines.append(f"Commit: {commit_sha}")
     lines.append("=" * 80)
 
     for idx, issue in enumerate(batch, 1):
         rule_id = issue.get("rule_id", "")
         level = issue.get("level", "")
         file_path = issue.get("file", "")
+        start_line = issue.get("start_line")
         message = issue.get("message", "")
+
+        # Build GitHub deeplink
+        deeplink = f"https://github.com/{repo}/blob/{commit_sha}/{file_path}#L{start_line}"
 
         lines.append(f"\n--- Issue {idx} ---")
         lines.append(f"Rule: {rule_id}")
         lines.append(f"Severity: {level}")
         lines.append(f"File: {file_path}")
-        lines.append(f"Line: {issue.get('start_line')}")
+        lines.append(f"Line: {start_line}")
+        lines.append(f"Deeplink: {deeplink}")
         lines.append(f"Message: {message}")
 
         # Source code
-        source = extract_source_text(file_path, issue.get("start_line"), issue.get("end_line"))
+        source = extract_source_text(file_path, start_line, issue.get("end_line"))
         if source:
             lines.append(f"Source Code:\n{source}")
 
@@ -174,6 +194,22 @@ def fetch_sarif_from_github(repo: str, token: str) -> dict:
 # ============================================================================
 # SARIF Parsing
 # ============================================================================
+
+def get_commit_sha_from_sarif(sarif_data: dict) -> str | None:
+    """Extract commit SHA from SARIF data if available."""
+    for run in sarif_data.get("runs", []):
+        for result in run.get("results", []):
+            # GitHub adds commit info in properties
+            props = result.get("properties", {})
+            if "github/alertUrl" in props:
+                # URL contains commit info, but let's check versionControlProvenance
+                pass
+        # Check versionControlProvenance
+        vcp = run.get("versionControlProvenance", [])
+        if vcp and "revisionId" in vcp[0]:
+            return vcp[0]["revisionId"]
+    return None
+
 
 def parse_sarif(sarif_data: dict) -> list[dict]:
     """Parse SARIF data and return list of issues with code flows."""
@@ -497,7 +533,13 @@ def main():
 
     # Submit to Devin if not in local mode
     if not args.local and batches:
+        # Get repo and commit SHA for deeplinks
+        repo = os.environ.get("GITHUB_REPOSITORY", "")
+        commit_sha = get_commit_sha_from_sarif(sarif_data) or os.environ.get("GITHUB_SHA", "main")
+
         print(f"\nSubmitting {len(batches)} batches to Devin...")
+        print(f"  Repository: {repo}")
+        print(f"  Commit SHA: {commit_sha}")
 
         for i, batch in enumerate(batches):
             rule_ids = set(issue.get("rule_id", "") for issue in batch)
@@ -505,7 +547,7 @@ def main():
             if len(rule_ids) > 3:
                 title += f" +{len(rule_ids) - 3} more"
 
-            prompt = format_batch_for_devin(batch)
+            prompt = format_batch_for_devin(batch, repo, commit_sha)
 
             print(f"\n  Batch {i+1}/{len(batches)}: {len(batch)} issues")
             print(f"    Title: {title}")
