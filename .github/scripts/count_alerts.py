@@ -1,4 +1,5 @@
 import os
+import json
 import requests
 
 repo = os.environ["GITHUB_REPOSITORY"]
@@ -19,3 +20,5 @@ open_alerts = [a for a in alerts if a["state"] == "open"]
 
 print(f"Total alerts: {len(alerts)}")
 print(f"Open alerts: {len(open_alerts)}")
+print("\n--- Full alerts response ---")
+print(json.dumps(alerts, indent=2))
