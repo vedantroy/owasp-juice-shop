@@ -557,8 +557,15 @@ def main():
 
             prompt = format_batch_for_devin(batch, repo, commit_sha)
 
-            print(f"\n  Batch {i+1}/{len(batches)}: {len(batch)} issues")
+            print(f"\n  Batch {i+1}/{len(batches_to_submit)}: {len(batch)} issues")
             print(f"    Title: {title}")
+            print(f"\n{'='*80}")
+            print("PROMPT SENT TO DEVIN:")
+            print("="*80)
+            print(prompt)
+            print("="*80)
+            print("END OF PROMPT")
+            print("="*80 + "\n")
 
             try:
                 result = submit_to_devin(prompt, title, devin_api_key, devin_snapshot_id)
