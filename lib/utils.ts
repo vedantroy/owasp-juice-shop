@@ -223,6 +223,13 @@ export const getErrorMessage = (error: unknown) => {
   return String(error)
 }
 
+export const getSafeErrorMessage = (error: unknown) => {
+  if (process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test') {
+    return getErrorMessage(error)
+  }
+  return 'An unexpected error occurred'
+}
+
 export const matchesSystemIniFile = (text: string) => {
   const match = text.match(/; for 16-bit app support/gi)
   return match !== null && match.length >= 1
