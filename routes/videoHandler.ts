@@ -6,7 +6,7 @@
 import fs from 'node:fs'
 import pug from 'pug'
 import config from 'config'
-import { type Request, type Response } from 'express'
+import { type Request, type Response, type NextFunction } from 'express'
 import { AllHtmlEntities as Entities } from 'html-entities'
 
 import * as challengeUtils from '../lib/challengeUtils'
@@ -49,9 +49,12 @@ export const getVideo = () => {
 }
 
 export const promotionVideo = () => {
-  return (req: Request, res: Response) => {
+  return (req: Request, res: Response, next: NextFunction) => {
     fs.readFile('views/promotionVideo.pug', function (err, buf) {
-      if (err != null) throw err
+      if (err != null) {
+        next(err)
+        return
+      }
       let template = buf.toString()
       const subs = getSubsFromFile()
 
