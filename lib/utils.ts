@@ -219,8 +219,8 @@ export const toSimpleIpAddress = (ipv6: string) => {
 }
 
 export const getErrorMessage = (error: unknown) => {
-  if (error instanceof Error) return error.message
-  return String(error)
+  logger.error(error instanceof Error ? error.message : String(error))
+  return 'An error occurred'
 }
 
 export const matchesSystemIniFile = (text: string) => {
