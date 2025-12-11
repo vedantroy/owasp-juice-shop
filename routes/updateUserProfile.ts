@@ -28,9 +28,15 @@ export function updateUserProfile () {
       }
 
       challengeUtils.solveIf(challenges.csrfChallenge, () => {
-        return ((req.headers.origin?.includes('://htmledit.squarefree.com')) ??
-          (req.headers.referer?.includes('://htmledit.squarefree.com'))) &&
-          req.body.username !== user.username
+        try {
+          const originUrl = req.headers.origin ? new URL(req.headers.origin) : null
+          const refererUrl = req.headers.referer ? new URL(req.headers.referer) : null
+          return (originUrl?.hostname === 'htmledit.squarefree.com' ||
+            refererUrl?.hostname === 'htmledit.squarefree.com') &&
+            req.body.username !== user.username
+        } catch {
+          return false
+        }
       })
 
       const savedUser = await user.update({ username: req.body.username })
