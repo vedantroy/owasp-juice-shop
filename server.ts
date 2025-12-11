@@ -267,20 +267,20 @@ restoreOverwrittenFilesWithOriginals().then(() => {
   // vuln-code-snippet start directoryListingChallenge accessLogDisclosureChallenge
   /* /ftp directory browsing and file download */ // vuln-code-snippet neutral-line directoryListingChallenge
   app.use('/ftp', serveIndexMiddleware, serveIndex('ftp', { icons: true })) // vuln-code-snippet vuln-line directoryListingChallenge
-  app.use('/ftp(?!/quarantine)/:file', servePublicFiles()) // vuln-code-snippet vuln-line directoryListingChallenge
-  app.use('/ftp/quarantine/:file', serveQuarantineFiles()) // vuln-code-snippet neutral-line directoryListingChallenge
+  app.use('/ftp(?!/quarantine)/:file', fileAccessLimiter, servePublicFiles()) // vuln-code-snippet vuln-line directoryListingChallenge
+  app.use('/ftp/quarantine/:file', fileAccessLimiter, serveQuarantineFiles()) // vuln-code-snippet neutral-line directoryListingChallenge
 
   app.use('/.well-known', serveIndexMiddleware, serveIndex('.well-known', { icons: true, view: 'details' }))
   app.use('/.well-known', express.static('.well-known'))
 
   /* /encryptionkeys directory browsing */
   app.use('/encryptionkeys', serveIndexMiddleware, serveIndex('encryptionkeys', { icons: true, view: 'details' }))
-  app.use('/encryptionkeys/:file', serveKeyFiles())
+  app.use('/encryptionkeys/:file', fileAccessLimiter, serveKeyFiles())
 
   /* /logs directory browsing */ // vuln-code-snippet neutral-line accessLogDisclosureChallenge
   app.use('/support/logs', serveIndexMiddleware, serveIndex('logs', { icons: true, view: 'details' })) // vuln-code-snippet vuln-line accessLogDisclosureChallenge
   app.use('/support/logs', verify.accessControlChallenges()) // vuln-code-snippet hide-line
-  app.use('/support/logs/:file', serveLogFiles()) // vuln-code-snippet vuln-line accessLogDisclosureChallenge
+  app.use('/support/logs/:file', fileAccessLimiter, serveLogFiles()) // vuln-code-snippet vuln-line accessLogDisclosureChallenge
 
   /* Swagger documentation for B2B v2 endpoints */
   app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument))
@@ -301,9 +301,9 @@ restoreOverwrittenFilesWithOriginals().then(() => {
 
   app.use(bodyParser.urlencoded({ extended: true }))
   /* File Upload */
-  app.post('/file-upload', uploadToMemory.single('file'), ensureFileIsPassed, metrics.observeFileUploadMetricsMiddleware(), checkUploadSize, checkFileType, handleZipFileUpload, handleXmlUpload, handleYamlUpload)
-  app.post('/profile/image/file', uploadToMemory.single('file'), ensureFileIsPassed, metrics.observeFileUploadMetricsMiddleware(), profileImageFileUpload())
-  app.post('/profile/image/url', uploadToMemory.single('file'), profileImageUrlUpload())
+  app.post('/file-upload', fileAccessLimiter, uploadToMemory.single('file'), ensureFileIsPassed, metrics.observeFileUploadMetricsMiddleware(), checkUploadSize, checkFileType, handleZipFileUpload, handleXmlUpload, handleYamlUpload)
+  app.post('/profile/image/file', fileAccessLimiter, uploadToMemory.single('file'), ensureFileIsPassed, metrics.observeFileUploadMetricsMiddleware(), profileImageFileUpload())
+  app.post('/profile/image/url', fileAccessLimiter, uploadToMemory.single('file'), profileImageUrlUpload())
   app.post('/rest/memories', uploadToDisk.single('image'), ensureFileIsPassed, security.appendUserId(), metrics.observeFileUploadMetricsMiddleware(), addMemory())
 
   app.use(bodyParser.text({ type: '*/*' }))
@@ -335,6 +335,26 @@ restoreOverwrittenFilesWithOriginals().then(() => {
   // vuln-code-snippet start resetPasswordMortyChallenge
   /* Rate limiting */
   app.enable('trust proxy')
+
+  // Shared rate limiters for routes that need protection
+  const fileAccessLimiter = rateLimit({
+    windowMs: 5 * 60 * 1000,
+    max: 1000,
+    validate: false
+  })
+
+  const authLimiter = rateLimit({
+    windowMs: 5 * 60 * 1000,
+    max: 200,
+    validate: false
+  })
+
+  const dbAccessLimiter = rateLimit({
+    windowMs: 5 * 60 * 1000,
+    max: 500,
+    validate: false
+  })
+
   app.use('/rest/user/reset-password', rateLimit({
     windowMs: 5 * 60 * 1000,
     max: 100,
@@ -422,7 +442,7 @@ restoreOverwrittenFilesWithOriginals().then(() => {
   /* Accounting users are allowed to check and update quantities */
   app.delete('/api/Quantitys/:id', security.denyAll())
   app.post('/api/Quantitys', security.denyAll())
-  app.use('/api/Quantitys/:id', security.isAccounting(), IpFilter(['123.456.789'], { mode: 'allow' }))
+  app.use('/api/Quantitys/:id', authLimiter, security.isAccounting(), IpFilter(['123.456.789'], { mode: 'allow' }))
   /* Feedbacks: Do not allow changes of existing feedback */
   app.put('/api/Feedbacks/:id', security.denyAll())
   /* PrivacyRequests: Only allowed for authenticated users */
@@ -454,7 +474,7 @@ restoreOverwrittenFilesWithOriginals().then(() => {
     twoFactorAuth.verify
   )
   /* Check 2FA Status for the current User */
-  app.get('/rest/2fa/status', security.isAuthorized(), twoFactorAuth.status)
+  app.get('/rest/2fa/status', authLimiter, security.isAuthorized(), twoFactorAuth.status)
   /* Enable 2FA for the current User */
   app.post('/rest/2fa/setup',
     rateLimit({ windowMs: 5 * 60 * 1000, max: 100, validate: false }),
@@ -586,11 +606,11 @@ restoreOverwrittenFilesWithOriginals().then(() => {
   }
 
   /* Custom Restful API */
-  app.post('/rest/user/login', login())
+  app.post('/rest/user/login', authLimiter, login())
   app.get('/rest/user/change-password', changePassword())
   app.post('/rest/user/reset-password', resetPassword())
   app.get('/rest/user/security-question', securityQuestion())
-  app.get('/rest/user/whoami', security.updateAuthenticatedUsers(), retrieveLoggedInUser())
+  app.get('/rest/user/whoami', authLimiter, security.updateAuthenticatedUsers(), retrieveLoggedInUser())
   app.get('/rest/user/authentication-details', authenticatedUsers())
   app.get('/rest/products/search', searchProducts())
   app.get('/rest/basket/:id', retrieveBasket())
@@ -607,15 +627,16 @@ restoreOverwrittenFilesWithOriginals().then(() => {
   app.put('/rest/continue-code/apply/:continueCode', restoreProgress.restoreProgress())
   app.get('/rest/captcha', captchas())
   app.get('/rest/image-captcha', imageCaptchas())
-  app.get('/rest/track-order/:id', trackOrder())
+  app.get('/rest/track-order/:id', dbAccessLimiter, trackOrder())
   app.get('/rest/country-mapping', countryMapping())
   app.get('/rest/saveLoginIp', saveLoginIp())
+  app.use('/rest/user/data-export', dbAccessLimiter)
   app.post('/rest/user/data-export', security.appendUserId(), verifyImageCaptcha())
   app.post('/rest/user/data-export', security.appendUserId(), dataExport())
-  app.get('/rest/languages', getLanguageList())
-  app.get('/rest/order-history', orderHistory())
-  app.get('/rest/order-history/orders', security.isAccounting(), allOrders())
-  app.put('/rest/order-history/:id/delivery-status', security.isAccounting(), toggleDeliveryStatus())
+  app.get('/rest/languages', fileAccessLimiter, getLanguageList())
+  app.get('/rest/order-history', dbAccessLimiter, orderHistory())
+  app.get('/rest/order-history/orders', authLimiter, security.isAccounting(), allOrders())
+  app.put('/rest/order-history/:id/delivery-status', authLimiter, security.isAccounting(), toggleDeliveryStatus())
   app.get('/rest/wallet/balance', security.appendUserId(), getWalletBalance())
   app.put('/rest/wallet/balance', security.appendUserId(), addWalletBalance())
   app.get('/rest/deluxe-membership', deluxeMembershipStatus())

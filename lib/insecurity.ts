@@ -40,6 +40,13 @@ interface IAuthenticatedUsers {
   updateFrom: (req: Request, user: ResponseWithUser) => any
 }
 
+// Note: MD5 is intentionally used here as part of the "weakPasswordChallenge" security challenge.
+// This is an educational vulnerability that users are meant to discover and exploit.
+// Changing to a secure algorithm (bcrypt, PBKDF2, etc.) would break:
+// 1. The weakPasswordChallenge and related security training scenarios
+// 2. Unit tests that assert specific MD5 hash outputs (test/server/insecuritySpec.ts)
+// 3. Existing user passwords in the database that are stored as MD5 hashes
+// A proper fix would require database migration and backward compatibility handling.
 export const hash = (data: string) => crypto.createHash('md5').update(data).digest('hex')
 export const hmac = (data: string) => crypto.createHmac('sha256', 'pa4qacea4VK9t9nGv7yZtwmj').update(data).digest('hex')
 
