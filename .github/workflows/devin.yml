@@ -42,4 +42,4 @@ jobs:
           MAX_BATCH_SIZE: ${{ inputs.max_batch_size }}
           DEVIN_API_KEY: ${{ secrets.DEVIN_API_KEY }}
           DEVIN_SNAPSHOT_ID: ${{ secrets.DEVIN_SNAPSHOT_ID }}
-        run: python .github/scripts/count_alerts.py
+        run: python .github/scripts/process_codeql.py
