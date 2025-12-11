@@ -69,9 +69,10 @@ router.post('/', async (req: Request<Record<string, unknown>, Record<string, unk
       const filePath: string = path.resolve(req.body.layout).toLowerCase()
       const isForbiddenFile: boolean = (filePath.includes('ftp') || filePath.includes('ctf.key') || filePath.includes('encryptionkeys'))
       if (!isForbiddenFile) {
-        res.render('dataErasureResult', {
-          ...req.body
-        }, (error, html) => {
+          res.render('dataErasureResult', {
+            email: req.body.email,
+            securityAnswer: req.body.securityAnswer
+          }, (error, html) => {
           if (!html || error) {
             next(new Error(error.message))
           } else {
@@ -85,7 +86,8 @@ router.post('/', async (req: Request<Record<string, unknown>, Record<string, unk
       }
     } else {
       res.render('dataErasureResult', {
-        ...req.body
+        email: req.body.email,
+        securityAnswer: req.body.securityAnswer
       })
     }
   } catch (error) {
