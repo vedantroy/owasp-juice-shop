@@ -2,7 +2,7 @@
 SARIF-based alert processing with code flow support.
 
 Can be run in two modes:
-1. Local: python count_alerts.py --sarif path/to/file.sarif --local
+1. Local: python process_codeql.py --sarif path/to/file.sarif --local
 2. GitHub Actions: Fetches SARIF from GitHub API and submits to Devin
 """
 
