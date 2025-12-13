@@ -267,20 +267,20 @@ restoreOverwrittenFilesWithOriginals().then(() => {
   // vuln-code-snippet start directoryListingChallenge accessLogDisclosureChallenge
   /* /ftp directory browsing and file download */ // vuln-code-snippet neutral-line directoryListingChallenge
   app.use('/ftp', serveIndexMiddleware, serveIndex('ftp', { icons: true })) // vuln-code-snippet vuln-line directoryListingChallenge
-  app.use('/ftp(?!/quarantine)/:file', servePublicFiles()) // vuln-code-snippet vuln-line directoryListingChallenge
-  app.use('/ftp/quarantine/:file', serveQuarantineFiles()) // vuln-code-snippet neutral-line directoryListingChallenge
+  app.use('/ftp(?!/quarantine)/:file', rateLimit({ windowMs: 5 * 60 * 1000, max: 100, validate: false }), servePublicFiles()) // vuln-code-snippet vuln-line directoryListingChallenge
+  app.use('/ftp/quarantine/:file', rateLimit({ windowMs: 5 * 60 * 1000, max: 100, validate: false }), serveQuarantineFiles()) // vuln-code-snippet neutral-line directoryListingChallenge
 
   app.use('/.well-known', serveIndexMiddleware, serveIndex('.well-known', { icons: true, view: 'details' }))
   app.use('/.well-known', express.static('.well-known'))
 
   /* /encryptionkeys directory browsing */
   app.use('/encryptionkeys', serveIndexMiddleware, serveIndex('encryptionkeys', { icons: true, view: 'details' }))
-  app.use('/encryptionkeys/:file', serveKeyFiles())
+  app.use('/encryptionkeys/:file', rateLimit({ windowMs: 5 * 60 * 1000, max: 100, validate: false }), serveKeyFiles())
 
   /* /logs directory browsing */ // vuln-code-snippet neutral-line accessLogDisclosureChallenge
   app.use('/support/logs', serveIndexMiddleware, serveIndex('logs', { icons: true, view: 'details' })) // vuln-code-snippet vuln-line accessLogDisclosureChallenge
   app.use('/support/logs', verify.accessControlChallenges()) // vuln-code-snippet hide-line
-  app.use('/support/logs/:file', serveLogFiles()) // vuln-code-snippet vuln-line accessLogDisclosureChallenge
+  app.use('/support/logs/:file', rateLimit({ windowMs: 5 * 60 * 1000, max: 100, validate: false }), serveLogFiles()) // vuln-code-snippet vuln-line accessLogDisclosureChallenge
 
   /* Swagger documentation for B2B v2 endpoints */
   app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument))
@@ -301,9 +301,9 @@ restoreOverwrittenFilesWithOriginals().then(() => {
 
   app.use(bodyParser.urlencoded({ extended: true }))
   /* File Upload */
-  app.post('/file-upload', uploadToMemory.single('file'), ensureFileIsPassed, metrics.observeFileUploadMetricsMiddleware(), checkUploadSize, checkFileType, handleZipFileUpload, handleXmlUpload, handleYamlUpload)
-  app.post('/profile/image/file', uploadToMemory.single('file'), ensureFileIsPassed, metrics.observeFileUploadMetricsMiddleware(), profileImageFileUpload())
-  app.post('/profile/image/url', uploadToMemory.single('file'), profileImageUrlUpload())
+  app.post('/file-upload', rateLimit({ windowMs: 5 * 60 * 1000, max: 100, validate: false }), uploadToMemory.single('file'), ensureFileIsPassed, metrics.observeFileUploadMetricsMiddleware(), checkUploadSize, checkFileType, handleZipFileUpload, handleXmlUpload, handleYamlUpload)
+  app.post('/profile/image/file', rateLimit({ windowMs: 5 * 60 * 1000, max: 100, validate: false }), uploadToMemory.single('file'), ensureFileIsPassed, metrics.observeFileUploadMetricsMiddleware(), profileImageFileUpload())
+  app.post('/profile/image/url', rateLimit({ windowMs: 5 * 60 * 1000, max: 100, validate: false }), uploadToMemory.single('file'), profileImageUrlUpload())
   app.post('/rest/memories', uploadToDisk.single('image'), ensureFileIsPassed, security.appendUserId(), metrics.observeFileUploadMetricsMiddleware(), addMemory())
 
   app.use(bodyParser.text({ type: '*/*' }))
@@ -422,7 +422,7 @@ restoreOverwrittenFilesWithOriginals().then(() => {
   /* Accounting users are allowed to check and update quantities */
   app.delete('/api/Quantitys/:id', security.denyAll())
   app.post('/api/Quantitys', security.denyAll())
-  app.use('/api/Quantitys/:id', security.isAccounting(), IpFilter(['123.456.789'], { mode: 'allow' }))
+  app.use('/api/Quantitys/:id', rateLimit({ windowMs: 5 * 60 * 1000, max: 100, validate: false }), security.isAccounting(), IpFilter(['123.456.789'], { mode: 'allow' }))
   /* Feedbacks: Do not allow changes of existing feedback */
   app.put('/api/Feedbacks/:id', security.denyAll())
   /* PrivacyRequests: Only allowed for authenticated users */
@@ -454,7 +454,7 @@ restoreOverwrittenFilesWithOriginals().then(() => {
     twoFactorAuth.verify
   )
   /* Check 2FA Status for the current User */
-  app.get('/rest/2fa/status', security.isAuthorized(), twoFactorAuth.status)
+  app.get('/rest/2fa/status', rateLimit({ windowMs: 5 * 60 * 1000, max: 100, validate: false }), security.isAuthorized(), twoFactorAuth.status)
   /* Enable 2FA for the current User */
   app.post('/rest/2fa/setup',
     rateLimit({ windowMs: 5 * 60 * 1000, max: 100, validate: false }),
@@ -586,11 +586,11 @@ restoreOverwrittenFilesWithOriginals().then(() => {
   }
 
   /* Custom Restful API */
-  app.post('/rest/user/login', login())
+  app.post('/rest/user/login', rateLimit({ windowMs: 5 * 60 * 1000, max: 100, validate: false }), login())
   app.get('/rest/user/change-password', changePassword())
   app.post('/rest/user/reset-password', resetPassword())
   app.get('/rest/user/security-question', securityQuestion())
-  app.get('/rest/user/whoami', security.updateAuthenticatedUsers(), retrieveLoggedInUser())
+  app.get('/rest/user/whoami', rateLimit({ windowMs: 5 * 60 * 1000, max: 100, validate: false }), security.updateAuthenticatedUsers(), retrieveLoggedInUser())
   app.get('/rest/user/authentication-details', authenticatedUsers())
   app.get('/rest/products/search', searchProducts())
   app.get('/rest/basket/:id', retrieveBasket())
@@ -607,15 +607,15 @@ restoreOverwrittenFilesWithOriginals().then(() => {
   app.put('/rest/continue-code/apply/:continueCode', restoreProgress.restoreProgress())
   app.get('/rest/captcha', captchas())
   app.get('/rest/image-captcha', imageCaptchas())
-  app.get('/rest/track-order/:id', trackOrder())
+  app.get('/rest/track-order/:id', rateLimit({ windowMs: 5 * 60 * 1000, max: 100, validate: false }), trackOrder())
   app.get('/rest/country-mapping', countryMapping())
   app.get('/rest/saveLoginIp', saveLoginIp())
-  app.post('/rest/user/data-export', security.appendUserId(), verifyImageCaptcha())
-  app.post('/rest/user/data-export', security.appendUserId(), dataExport())
-  app.get('/rest/languages', getLanguageList())
-  app.get('/rest/order-history', orderHistory())
-  app.get('/rest/order-history/orders', security.isAccounting(), allOrders())
-  app.put('/rest/order-history/:id/delivery-status', security.isAccounting(), toggleDeliveryStatus())
+  app.post('/rest/user/data-export', rateLimit({ windowMs: 5 * 60 * 1000, max: 100, validate: false }), security.appendUserId(), verifyImageCaptcha())
+  app.post('/rest/user/data-export', rateLimit({ windowMs: 5 * 60 * 1000, max: 100, validate: false }), security.appendUserId(), dataExport())
+  app.get('/rest/languages', rateLimit({ windowMs: 5 * 60 * 1000, max: 100, validate: false }), getLanguageList())
+  app.get('/rest/order-history', rateLimit({ windowMs: 5 * 60 * 1000, max: 100, validate: false }), orderHistory())
+  app.get('/rest/order-history/orders', rateLimit({ windowMs: 5 * 60 * 1000, max: 100, validate: false }), security.isAccounting(), allOrders())
+  app.put('/rest/order-history/:id/delivery-status', rateLimit({ windowMs: 5 * 60 * 1000, max: 100, validate: false }), security.isAccounting(), toggleDeliveryStatus())
   app.get('/rest/wallet/balance', security.appendUserId(), getWalletBalance())
   app.put('/rest/wallet/balance', security.appendUserId(), addWalletBalance())
   app.get('/rest/deluxe-membership', deluxeMembershipStatus())
