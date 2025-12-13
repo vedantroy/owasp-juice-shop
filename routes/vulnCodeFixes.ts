@@ -1,4 +1,5 @@
 import fs from 'node:fs'
+import path from 'node:path'
 import yaml from 'js-yaml'
 import { type NextFunction, type Request, type Response } from 'express'
 
@@ -7,6 +8,10 @@ import * as challengeUtils from '../lib/challengeUtils'
 import { type ChallengeKey } from 'models/challenge'
 
 const FixesDir = 'data/static/codefixes'
+
+const isValidKey = (key: string): boolean => {
+  return typeof key === 'string' && key.length > 0 && !/[/\\]|\.\./.test(key)
+}
 
 interface codeFix {
   fixes: string[]
@@ -70,6 +75,12 @@ export const serveCodeFixes = () => (req: Request<FixesRequestParams, Record<str
 export const checkCorrectFix = () => async (req: Request<Record<string, unknown>, Record<string, unknown>, VerdictRequestBody>, res: Response, next: NextFunction) => {
   const key = req.body.key
   const selectedFix = req.body.selectedFix
+  if (!isValidKey(key)) {
+    res.status(400).json({
+      error: 'Invalid key format!'
+    })
+    return
+  }
   const fixData = readFixes(key)
   if (fixData.fixes.length === 0) {
     res.status(404).json({
@@ -77,8 +88,11 @@ export const checkCorrectFix = () => async (req: Request<Record<string, unknown>
     })
   } else {
     let explanation
-    if (fs.existsSync('./data/static/codefixes/' + key + '.info.yml')) {
-      const codingChallengeInfos = yaml.load(fs.readFileSync('./data/static/codefixes/' + key + '.info.yml', 'utf8'))
+    const infoFilePath = path.join('./data/static/codefixes/', key + '.info.yml')
+    const codefixesDir = path.resolve('./data/static/codefixes/')
+    const resolvedInfoPath = path.resolve(infoFilePath)
+    if (resolvedInfoPath.startsWith(codefixesDir + path.sep) && fs.existsSync(infoFilePath)) {
+      const codingChallengeInfos = yaml.load(fs.readFileSync(infoFilePath, 'utf8'))
       const selectedFixInfo = codingChallengeInfos?.fixes.find(({ id }: { id: number }) => id === selectedFix + 1)
       if (selectedFixInfo?.explanation) explanation = res.__(selectedFixInfo.explanation)
     }
