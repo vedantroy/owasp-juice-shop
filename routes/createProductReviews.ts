@@ -29,7 +29,7 @@ export function createProductReviews () {
       })
       return res.status(201).json({ status: 'success' })
     } catch (err: unknown) {
-      return res.status(500).json(utils.getErrorMessage(err))
+      return res.status(500).json(utils.getSafeErrorMessage(err))
     }
   }
 }
